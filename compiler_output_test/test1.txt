@@ -1,0 +1,52 @@
+5.2
+WITH RECURSIVE   
+    temp1(start, end) AS (
+        SELECT fish.startNode,fish.endNode FROM fish 
+        WHERE fish.label = 5
+    )
+    ,
+    temp2(start, end) AS (
+        SELECT fish.startNode,fish.endNode FROM fish 
+        WHERE fish.label = 2
+    )
+    ,
+    temp3(start, end) AS (
+        SELECT temp1.start, temp2.end FROM temp1,temp2 
+        WHERE temp1.end = temp2.start
+    )
+      select * from temp3;
+    start   end
+0       1    10
+1       2    20
+2       3    30
+3       4    40
+4       5    50
+5       6    60
+6       8    80
+7       9    90
+8      10   100
+9      12   120
+10     15   150
+11     16   160
+12     18   180
+13     20   200
+14     24   240
+15     25   250
+16     27   270
+17     30   300
+18     32   320
+19     36   360
+20     40   400
+21     45   450
+22     48   480
+23     50   500
+24     54   540
+25     60   600
+26     64   640
+27     72   720
+28     75   750
+29     80   800
+30     81   810
+31     90   900
+32     96   960
+33    100  1000

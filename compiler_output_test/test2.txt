@@ -1,0 +1,74 @@
+532|2355
+WITH RECURSIVE   
+    temp1(start, end) AS (
+        SELECT fish.startNode,fish.endNode FROM fish 
+        WHERE fish.label = 5
+    )
+    ,
+    temp2(start, end) AS (
+        SELECT fish.startNode,fish.endNode FROM fish 
+        WHERE fish.label = 3
+    )
+    ,
+    temp3(start, end) AS (
+        SELECT temp1.start, temp2.end FROM temp1,temp2 
+        WHERE temp1.end = temp2.start
+    )
+    ,
+    temp4(start, end) AS (
+        SELECT fish.startNode,fish.endNode FROM fish 
+        WHERE fish.label = 2
+    )
+    ,
+    temp5(start, end) AS (
+        SELECT temp3.start, temp4.end FROM temp3,temp4 
+        WHERE temp3.end = temp4.start
+    )
+    ,
+    temp6(start, end) AS (
+        SELECT temp4.start, temp2.end FROM temp4,temp2 
+        WHERE temp4.end = temp2.start
+    )
+    ,
+    temp7(start, end) AS (
+        SELECT temp6.start, temp1.end FROM temp6,temp1 
+        WHERE temp6.end = temp1.start
+    )
+    ,
+    temp8(start, end) AS (
+        SELECT temp7.start, temp1.end FROM temp7,temp1 
+        WHERE temp7.end = temp1.start
+    )
+    ,
+    temp9(start, end) AS (
+        SELECT * FROM temp5
+        UNION ALL
+        SELECT * FROM temp8
+    )
+      select * from temp9;
+    start  end
+0       1   30
+1       2   60
+2       3   90
+3       4  120
+4       5  150
+5       6  180
+6       8  240
+7       9  270
+8      10  300
+9      12  360
+10     15  450
+11     16  480
+12     18  540
+13     20  600
+14     24  720
+15     25  750
+16     27  810
+17     30  900
+18     32  960
+19      1  150
+20      2  300
+21      3  450
+22      4  600
+23      5  750
+24      6  900

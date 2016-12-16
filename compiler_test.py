@@ -134,6 +134,7 @@ def get_star(prev,x):
 
 def test0(con):
     # 2
+    print("2")
     with_rec ='WITH RECURSIVE '
     (idx0, temp0) = literal(2)
     sql_str = "{}  {}  select * from temp{};".format(with_rec, temp0, temp_num);
@@ -143,6 +144,7 @@ def test0(con):
     
 def test1(con):
     # 5.2 
+    print("5.2")
     with_rec ='WITH RECURSIVE '
     (idx0, temp0) = literal(5)
     (idx1, temp1) = literal(2)
@@ -155,6 +157,7 @@ def test1(con):
 
 def test2(con):
     # 532|2355 
+    print("532|2355")
     with_rec ='WITH RECURSIVE '
     (idx0, temp0) = literal(5)
     (idx1, temp1) = literal(3)
@@ -178,6 +181,7 @@ def test2(con):
 
 def test3(con):
     # (5.2)* 
+    print("(5.2)*")
     with_rec ='WITH RECURSIVE '
     (idx0, temp0) = literal(5)
     (idx1, temp1) = literal(2)
