@@ -52,7 +52,7 @@ def OR(leftChild, rightChild):
     parse =  '''
     {0}(start, end) AS (
         SELECT * FROM {1}
-        UNION ALL
+        UNION
         SELECT * FROM {2}
     )
     '''.format(temp_table,leftChild_table, rightChild_table)
@@ -94,8 +94,10 @@ def STAR(child):
     child_table = "temp"+str(child)
     parse =  '''
         {0}(start, end) AS (
-            SELECT * FROM {1}
-            UNION ALL
+            SELECT fish.startNode,fish.startNode FROM fish 
+            UNION 
+            SELECT fish.endNode,fish.endNode FROM fish 
+            UNION
             SELECT {0}.start, {1}.end FROM {0},{1} 
             WHERE {0}.end = {1}.start
         )
@@ -104,33 +106,69 @@ def STAR(child):
     temp_table_dict[temp_num] = parse
     return rtn;
 
-def get_star(prev,x):
+def PLUS(child):
+    '''
+        input: 
+            child: temp table idx
+        output: tuple(temp table idx, SQL string)
+    '''
     global temp_num
-    if prev < 0:
-        temp_table = "temp"+str(temp_num)
-        parse =  '''
+    temp_num += 1
+    temp_table = "temp"+str(temp_num)
+    child_table = "temp"+str(child)
+    parse =  '''
         {0}(start, end) AS (
-            VALUES(1,1)
-            UNION ALL
-            SELECT {0}.start, fish.endNode FROM {0},fish 
-            WHERE {0}.end = fish.startNode AND fish.label = {1} 
+            SELECT * FROM {1}
+            UNION
+            SELECT {0}.start, {1}.end FROM {0},{1} 
+            WHERE {0}.end = {1}.start
         )
-    '''.format(temp_table,x)
-        temp_num += 1
-    else:
-        temp_table = "temp"+str(temp_num)
-        prev_table = "temp"+str(prev)
-        parse = '''
-        {1}(start, end) AS (
-            SELECT * FROM {2}
-            UNION ALL
-            SELECT {1}.start, fish.endNode FROM {1},fish 
-            WHERE {1}.end = fish.startNode AND fish.label = {0} 
-        )
-        '''.format(x,temp_table,prev_table)
-        temp_num += 1
+    '''.format(temp_table,child_table)
+    rtn =  (temp_num,parse);
+    temp_table_dict[temp_num] = parse
+    return rtn;
 
-    return parse 
+def MINUS(child):
+    '''
+        input: 
+            child: temp table idx
+        output: tuple(temp table idx, SQL string)
+    '''
+    global temp_num
+    temp_num += 1
+    temp_table = "temp"+str(temp_num)
+    child_table = "temp"+str(child)
+    parse =  '''
+        {0}(start, end) AS (
+            SELECT {1}.end, {1}.start FROM {1} 
+        )
+    '''.format(temp_table,child_table)
+    rtn =  (temp_num,parse);
+    temp_table_dict[temp_num] = parse
+    return rtn;
+
+def OPTIONAL(child):
+    '''
+        input: 
+            child: temp table idx
+        output: tuple(temp table idx, SQL string)
+    '''
+    global temp_num
+    temp_num += 1
+    temp_table = "temp"+str(temp_num)
+    child_table = "temp"+str(child)
+    parse =  '''
+        {0}(start, end) AS (
+            SELECT fish.startNode,fish.startNode FROM fish 
+            UNION 
+            SELECT fish.endNode,fish.endNode FROM fish 
+            UNION
+            SELECT * FROM {1}
+        )
+    '''.format(temp_table,child_table)
+    rtn =  (temp_num,parse);
+    temp_table_dict[temp_num] = parse
+    return rtn;
 
 def test0(con):
     # 2
@@ -180,6 +218,18 @@ def test2(con):
     print(df)
 
 def test3(con):
+    # 5* 
+    print("3*")
+    with_rec ='WITH RECURSIVE '
+    (idx0, temp0) = literal(3)
+    (idx1, temp1) = STAR(idx0);
+    tables = conc_table_with_comma()
+    sql_str = "{}  {}  select * from temp{};".format(with_rec, tables, temp_num);
+    print(sql_str)
+    df = pd.read_sql_query(sql_str, con)
+    print(df)
+
+def test4(con):
     # (5.2)* 
     print("(5.2)*")
     with_rec ='WITH RECURSIVE '
@@ -192,26 +242,65 @@ def test3(con):
     print(sql_str)
     df = pd.read_sql_query(sql_str, con)
     print(df)
-'''
-def prevtest(con):
-    # '2*3*'->'2*''3*'
-    x = '2'
-    y = '3'
 
+def test5(con):
+    # 5(52)*3* 
+    print("5(52)*3*")
     with_rec ='WITH RECURSIVE '
-    temp0 = get_star(-1,x)
-    temp1 = get_star(0,y)
-    sql_str = "{} {}, {}  select * from temp{};".format(with_rec, temp0,temp1, temp_num-1);
-    #sql_str = with_rec + temp0 + ","+temp1 + " select * from temp1;"
+    (idx0, temp0) = literal(5)
+    (idx1, temp1) = literal(2)
+    (idx2, temp2) = CONC(idx0,idx1);
+    (idx3, temp3) = STAR(idx2);
+    (idx4, temp4) = CONC(idx0,idx3);
+    (idx5, temp5) = literal(3)
+    (idx6, temp6) = STAR(idx4);
+    (idx7, temp7) = CONC(idx4,idx6);
+    tables = conc_table_with_comma()
+    sql_str = "{}  {}  select * from temp{};".format(with_rec, tables, temp_num);
     print(sql_str)
     df = pd.read_sql_query(sql_str, con)
     print(df)
-   '''
+
+def test6(con):
+    # (52)+3+ 
+    print("(52)+3+")
+    with_rec ='WITH RECURSIVE '
+    (idx0, temp0) = literal(5)
+    (idx1, temp1) = literal(2)
+    (idx2, temp2) = CONC(idx0,idx1);
+    (idx3, temp3) = PLUS(idx2);
+    (idx4, temp4) = literal(3)
+    (idx5, temp5) = PLUS(idx4);
+    (idx6, temp6) = CONC(idx3,idx5);
+    tables = conc_table_with_comma()
+    sql_str = "{}  {}  select * from temp{};".format(with_rec, tables, temp_num);
+    print(sql_str)
+    df = pd.read_sql_query(sql_str, con)
+    print(df)
+
+def test7(con):
+    # (5(52)*3*)- 
+    print("(5(52)*3*)-")
+    with_rec ='WITH RECURSIVE '
+    (idx0, temp0) = literal(5)
+    (idx1, temp1) = literal(2)
+    (idx2, temp2) = CONC(idx0,idx1);
+    (idx3, temp3) = STAR(idx2);
+    (idx4, temp4) = CONC(idx0,idx3);
+    (idx5, temp5) = literal(3)
+    (idx6, temp6) = STAR(idx4);
+    (idx7, temp7) = CONC(idx4,idx6);
+    (idx8, temp8) = MINUS(idx7);
+    tables = conc_table_with_comma()
+    sql_str = "{}  {}  select * from temp{};".format(with_rec, tables, temp_num);
+    print(sql_str)
+    df = pd.read_sql_query(sql_str, con)
+    print(df)
 
 if __name__ == "__main__":
     # Read sqlite query results into a pandas DataFrame
     con = sqlite3.connect("data/hamming.db")
-    test3(con)
+    test5(con)
     
     con.close()
 
