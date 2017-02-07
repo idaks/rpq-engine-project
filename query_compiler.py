@@ -7,7 +7,6 @@ dict_val_idx = {}
 dict_idx_sql = {}
 temp_num = 0
 temp_table_dict = {} 
-target_table = sys.argv[2]
 def sql_generation():
     '''
         concatenate string that will be paesed into sql 
@@ -312,11 +311,13 @@ class queryParser(Parser):
                 print("Syntax error at EOF")
 
 if __name__ == '__main__':
-    if (len(sys.argv) < 2):
+    if (len(sys.argv) < 3):
         print("Usage: python query_compiler.py (database) (table)")
-                
+        exit()
+    global target_table            
     # Read sqlite query results into a pandas DataFrame
     path = sys.argv[1]
+    target_table = sys.argv[2]
     # "data/hamming.db"
     con = sqlite3.connect(path)
     
