@@ -310,8 +310,11 @@ class queryParser(Parser):
                 print("Syntax error at '%s'" % p.value)
             else:
                 print("Syntax error at EOF")
-# problem: express aa* wrong
+
 if __name__ == '__main__':
+    if (len(sys.argv) < 2):
+        print("Usage: python query_compiler.py (database) (table)")
+                
     # Read sqlite query results into a pandas DataFrame
     path = sys.argv[1]
     # "data/hamming.db"
