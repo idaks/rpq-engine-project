@@ -335,9 +335,8 @@ if __name__ == '__main__':
         # print(sql_str)
         try:
             df = pd.read_sql_query(sql_str, con)
+            print(df)
         except:
             print("Query Failed!")
-            break
-        print(df)
 
     con.close()
