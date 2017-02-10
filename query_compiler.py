@@ -335,6 +335,7 @@ if __name__ == '__main__':
         # print(sql_str)
         try:
             df = pd.read_sql_query(sql_str, con)
+            pd.set_option('display.max_rows', len(df))
             print(df)
         except:
             print("Query Failed!")
