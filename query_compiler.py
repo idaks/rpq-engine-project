@@ -3,186 +3,171 @@ import pandas as pd
 import sqlite3
 import yacc
 import lex
-dict_val_idx = {}
-dict_idx_sql = {}
-temp_num = 0
-temp_table_dict = {} 
-def sql_generation():
-    '''
-        concatenate string that will be paesed into sql 
-    '''
-    with_rec ='WITH RECURSIVE '
-    if(temp_num > 0):
-        tables = temp_table_dict[1]
-        for i in range(2,temp_num+1):
-            tables += ","+temp_table_dict[i]
-    else:
-        return None
-    sql_str = "{}  {}  select * from temp{};".format(with_rec, tables, temp_num);
-    return sql_str
 
-def literal(literal):
-    '''
-        form the data with edge label literal into a temp table
-        input: char
-        output: tuple(temp table idx, SQL string)
-    '''
+class sql_compiler:
+    def __init__(self):
+        self.dict_val_idx = {}
+        self.dict_idx_sql = {}
+        self.temp_num = 0
 
-    global temp_num
-    temp_num += 1
-    temp_table = "temp"+str(temp_num)
-    parse =  '''
-    {0}(start, end) AS (
-        SELECT {2}.startNode,{2}.endNode FROM {2}
-        WHERE {2}.label = {1}
-    )
-    '''.format(temp_table,literal,target_table)
-    rtn =  (temp_num,parse);
-    temp_table_dict[temp_num] = parse
-    dict_val_idx[literal] = temp_num
-    return rtn
+    def sql_generation(self):
+        '''
+            concatenate string that will be paesed into sql 
+        '''
+        with_rec ='WITH RECURSIVE '
+        print(self.dict_idx_sql)
+        if(self.temp_num > 0):
+            tables = self.dict_idx_sql[1]
+            for i in range(2,self.temp_num+1):
+                tables += ","+self.dict_idx_sql[i]
+        else:
+            return None
+        sql_str = "{}  {}  select * from temp{};".format(with_rec, tables, self.temp_num);
+        print(sql_str)
+        return sql_str
 
+    def literal(self, literal):
+        '''
+            form the data with edge label literal into a temp table
+            input: char
+            output: tuple(temp table idx, SQL string)
+        '''
 
-def OR(leftChild, rightChild):
-    '''
-        input: 
-            leftChild: temp table idx
-            rightChild: temp table idx
-        output: tuple(temp table idx, SQL string)
-    '''
-
-    global temp_num
-    temp_num += 1
-    temp_table = "temp"+str(temp_num)
-    leftChild_table = "temp"+str(leftChild)
-    rightChild_table = "temp"+str(rightChild)
-    parse =  '''
-    {0}(start, end) AS (
-        SELECT * FROM {1}
-        UNION
-        SELECT * FROM {2}
-    )
-    '''.format(temp_table,leftChild_table, rightChild_table)
-    rtn =  (temp_num,parse);
-    temp_table_dict[temp_num] = parse
-    return rtn
-
-def CONC(leftChild, rightChild):
-    '''
-        input: 
-            leftChild: temp table idx
-            rightChild: temp table idx
-        output: tuple(temp table idx, SQL string)
-    '''
-    global temp_num
-    temp_num += 1
-    temp_table = "temp"+str(temp_num)
-    leftChild_table = "temp"+str(leftChild)
-    rightChild_table = "temp"+str(rightChild)
-    parse =  '''
-    {0}(start, end) AS (
-        SELECT a.start, b.end FROM {1} AS a,{2} AS b
-        WHERE a.end = b.start
-    )
-    '''.format(temp_table,leftChild_table, rightChild_table)
-    rtn =  (temp_num,parse);
-    temp_table_dict[temp_num] = parse
-    return rtn;
-
-def STAR(child):
-    '''
-        input: 
-            child: temp table idx
-        output: tuple(temp table idx, SQL string)
-    '''
-    global temp_num
-    temp_num += 1
-    temp_table = "temp"+str(temp_num)
-    child_table = "temp"+str(child)
-    parse =  '''
+        self.temp_num += 1
+        temp_table = "temp"+str(self.temp_num)
+        parse =  '''
         {0}(start, end) AS (
-            SELECT {2}.startNode,{2}.startNode FROM {2}
-            UNION 
-            SELECT {2}.endNode,{2}.endNode FROM {2}
-            UNION
-            SELECT a.start, b.end FROM {0} AS a,{1} AS b
-            WHERE a.end = b.start
+            SELECT {2}.startNode,{2}.endNode FROM {2}
+            WHERE {2}.label = {1}
         )
-    '''.format(temp_table,child_table, target_table)
-    temp_table_dict[temp_num] = parse
-    rtn =  (temp_num,parse);
-    return rtn;
+        '''.format(temp_table,literal,target_table)
+        return parse
 
-def PLUS(child):
-    '''
-        input: 
-            child: temp table idx
-        output: tuple(temp table idx, SQL string)
-    '''
-    global temp_num
-    temp_num += 1
-    temp_table = "temp"+str(temp_num)
-    child_table = "temp"+str(child)
-    parse =  '''
+
+    def OR(self, leftChild, rightChild):
+        '''
+            input: 
+                leftChild: temp table idx
+                rightChild: temp table idx
+            output: tuple(temp table idx, SQL string)
+        '''
+
+        self.temp_num += 1
+        temp_table = "temp"+str(self.temp_num)
+        leftChild_table = "temp"+str(leftChild)
+        rightChild_table = "temp"+str(rightChild)
+        parse =  '''
         {0}(start, end) AS (
             SELECT * FROM {1}
             UNION
-            SELECT a.start, b.end FROM {0} AS a,{1} AS b
+            SELECT * FROM {2}
+        )
+        '''.format(temp_table,leftChild_table, rightChild_table)
+        return parse
+
+    def CONC(self, leftChild, rightChild):
+        '''
+            input: 
+                leftChild: temp table idx
+                rightChild: temp table idx
+            output: tuple(temp table idx, SQL string)
+        '''
+        self.temp_num += 1
+        temp_table = "temp"+str(self.temp_num)
+        leftChild_table = "temp"+str(leftChild)
+        rightChild_table = "temp"+str(rightChild)
+        parse =  '''
+        {0}(start, end) AS (
+            SELECT a.start, b.end FROM {1} AS a,{2} AS b
             WHERE a.end = b.start
         )
-    '''.format(temp_table,child_table)
-    rtn =  (temp_num,parse);
-    temp_table_dict[temp_num] = parse
-    return rtn;
+        '''.format(temp_table,leftChild_table, rightChild_table)
+        return parse
 
-def MINUS(child):
-    '''
-        input: 
-            child: temp table idx
-        output: tuple(temp table idx, SQL string)
-    '''
-    global temp_num
-    temp_num += 1
-    temp_table = "temp"+str(temp_num)
-    child_table = "temp"+str(child)
-    parse =  '''
-        {0}(start, end) AS (
-            SELECT {1}.end, {1}.start FROM {1} 
-        )
-    '''.format(temp_table,child_table)
-    rtn =  (temp_num,parse);
-    temp_table_dict[temp_num] = parse
-    return rtn;
+    def STAR(self, child):
+        '''
+            input: 
+                child: temp table idx
+            output: tuple(temp table idx, SQL string)
+        '''
+        self.temp_num += 1
+        temp_table = "temp"+str(self.temp_num)
+        child_table = "temp"+str(child)
+        parse =  '''
+            {0}(start, end) AS (
+                SELECT {2}.startNode,{2}.startNode FROM {2}
+                UNION 
+                SELECT {2}.endNode,{2}.endNode FROM {2}
+                UNION
+                SELECT a.start, b.end FROM {0} AS a,{1} AS b
+                WHERE a.end = b.start
+            )
+        '''.format(temp_table,child_table, target_table)
+        return parse
 
-def QMARK(child):
-    '''
-        input: 
-            child: temp table idx
-        output: tuple(temp table idx, SQL string)
-    '''
-    global temp_num
-    temp_num += 1
-    temp_table = "temp"+str(temp_num)
-    child_table = "temp"+str(child)
-    parse =  '''
-        {0}(start, end) AS (
-            SELECT {2}.startNode,{2}.startNode FROM {2}
-            UNION 
-            SELECT {2}.endNode,{2}.endNode FROM {2}
-            UNION
-            SELECT * FROM {1}
-        )
-    '''.format(temp_table,child_table,target_table)
-    rtn =  (temp_num,parse);
-    temp_table_dict[temp_num] = parse
-    return rtn;
+    def PLUS(self, child):
+        '''
+            input: 
+                child: temp table idx
+            output: tuple(temp table idx, SQL string)
+        '''
+        self.temp_num += 1
+        temp_table = "temp"+str(self.temp_num)
+        child_table = "temp"+str(child)
+        parse =  '''
+            {0}(start, end) AS (
+                SELECT * FROM {1}
+                UNION
+                SELECT a.start, b.end FROM {0} AS a,{1} AS b
+                WHERE a.end = b.start
+            )
+        '''.format(temp_table,child_table)
+        return parse
+
+    def MINUS(self,child):
+        '''
+            input: 
+                child: temp table idx
+            output: tuple(temp table idx, SQL string)
+        '''
+        self.temp_num += 1
+        temp_table = "temp"+str(self.temp_num)
+        child_table = "temp"+str(child)
+        parse =  '''
+            {0}(start, end) AS (
+                SELECT {1}.end, {1}.start FROM {1} 
+            )
+        '''.format(temp_table,child_table)
+        return parse
+
+    def QMARK(self, child):
+        '''
+            input: 
+                child: temp table idx
+            output: tuple(temp table idx, SQL string)
+        '''
+        self.temp_num += 1
+        temp_table = "temp"+str(self.temp_num)
+        child_table = "temp"+str(child)
+        parse =  '''
+            {0}(start, end) AS (
+                SELECT {2}.startNode,{2}.startNode FROM {2}
+                UNION 
+                SELECT {2}.endNode,{2}.endNode FROM {2}
+                UNION
+                SELECT * FROM {1}
+            )
+        '''.format(temp_table,child_table,target_table)
+        return parse
 
 class Parser:
 
     tokens = ()
     precedence = ()
     
-    def __init__(self, arg1):
+    def __init__(self):
+        print("init parser")
+        self.sql = sql_compiler()
         lexer = lex.lex(module = self)
 
         # Build the parser
@@ -190,6 +175,7 @@ class Parser:
 
     def run(self, data):
         # Parse.
+        print(self.sql.dict_val_idx, self.sql.dict_idx_sql, self.sql.temp_num)
         yacc.parse(data)
     
     def printList(self):
@@ -210,6 +196,7 @@ class queryParser(Parser):
     t_MINUS = r'\-'
     t_QMARK = r'\?'
  
+
 # Define a rule so we can track line numbers
     def t_newline(self, t):
             r'\n+'
@@ -228,15 +215,18 @@ class queryParser(Parser):
 
     def p_expressions_edge(self, t):
         '''expression    : EDGEID'''
+        print("Edge")
         t[0] = t[1]
-        if t[0] not in dict_val_idx:
-            literal(t[0])
-            dict_val_idx[t[0]] = temp_num
+        if t[0] not in self.sql.dict_val_idx:
+            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.literal(t[0])
+            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
+        print(self.sql.dict_val_idx)
     
     def p_expression_single(self, t):
         '''expression    : LPAREN expression RPAREN'''
+        print("()")
         t[0] = "(" + t[2] + ")"
-        dict_val_idx[t[0]] = dict_val_idx[t[2]]
+        self.sql.dict_val_idx[t[0]] = self.sql.dict_val_idx[t[2]]
 
     def p_expression_recursiveBinary(self, t):
         '''expression    : expression OR expression
@@ -245,64 +235,64 @@ class queryParser(Parser):
             print("Recursive Or")
             t[0] = t[1] + "|" + t[3]
             if t[0] not in dict_val_idx:
-                leftChild = dict_val_idx[t[1]]
-                rightChild = dict_val_idx[t[3]]
-                OR(leftChild, rightChild)
-                dict_val_idx[t[0]] = temp_num
+                leftChild = self.sql.dict_val_idx[t[1]]
+                rightChild = self.sql.dict_val_idx[t[3]]
+                self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.OR(leftChild, rightChild)
+                self.sql.dict_val_idx[t[0]] = self.sql.temp_num
         else:
             print("Recursive Conc")
             t[0] = t[1] + "." + t[3]
-            if t[0] not in dict_val_idx:
-                leftChild = dict_val_idx[t[1]]
-                rightChild = dict_val_idx[t[3]]
-                CONC(leftChild, rightChild)
-                dict_val_idx[t[0]] = temp_num
+            if t[0] not in self.sql.dict_val_idx:
+                leftChild = self.sql.dict_val_idx[t[1]]
+                rightChild = self.sql.dict_val_idx[t[3]]
+                self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.CONC(leftChild, rightChild)
+                self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
     def p_expression_starEdge(self, t):
         '''expression    : expression STAR'''
         print("Star on edge")
         t[0] = t[1] + "*"
-        if t[0] not in dict_val_idx:
-            child = dict_val_idx[t[1]]
-            STAR(child)
-            dict_val_idx[t[0]] = temp_num
+        if t[0] not in self.sql.dict_val_idx:
+            child = self.sql.dict_val_idx[t[1]]
+            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.STAR(child)
+            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
     def p_expression_plusEdge(self, t):
         '''expression    : expression PLUS'''
         print("Plus on edge")
         t[0] = t[1] + "+"
-        if t[0] not in dict_val_idx:
-            child = dict_val_idx[t[1]]
-            PLUS(child)
-            dict_val_idx[t[0]] = temp_num
+        if t[0] not in self.sql.dict_val_idx:
+            child = self.sql.dict_val_idx[t[1]]
+            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.PLUS(child)
+            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
     def p_expression_minusEdge(self, t):
         '''expression    : expression MINUS'''
         print("Minus on edge")
         t[0] = t[1] + "-"
-        if t[0] not in dict_val_idx:
-            child = dict_val_idx[t[1]]
-            MINUS(child)
-            dict_val_idx[t[0]] = temp_num
+        if t[0] not in self.sql.dict_val_idx:
+            child = self.sql.dict_val_idx[t[1]]
+            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.MINUS(child)
+            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
     def p_expression_qmarkEdge(self, t):
         '''expression    : expression QMARK'''
         print("Optional on edge")
         t[0] = t[1] + "?"
-        if t[0] not in dict_val_idx:
-            child = dict_val_idx[t[1]]
-            QMARK(child)
-            dict_val_idx[t[0]] = temp_num
+        if t[0] not in self.sql.dict_val_idx:
+            child = self.sql.dict_val_idx[t[1]]
+            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.QMARK(child)
+            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
     def p_expression_expression(self, t):
         '''expression    : expression expression'''
         print("Concatenate two expressions")
         t[0] = t[1] + "." + t[2]
-        if t[0] not in dict_val_idx:
-            leftChild = dict_val_idx[t[1]]
-            rightChild = dict_val_idx[t[2]]
-            CONC(leftChild, rightChild)
-            dict_val_idx[t[0]] = temp_num
+        if t[0] not in self.sql.dict_val_idx:
+            leftChild = self.sql.dict_val_idx[t[1]]
+            rightChild = self.sql.dict_val_idx[t[2]]
+            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.CONC(leftChild, rightChild)
+            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
     def p_error(self, p):
             if p:
@@ -329,9 +319,9 @@ if __name__ == '__main__':
         if not s:
             continue
         print('Query: {}\nParsing...\n'.format(s))
-        calc = queryParser(True)
+        calc = queryParser()
         calc.run(s)
-        sql_str = sql_generation()
+        sql_str = calc.sql.sql_generation()
         # print(sql_str)
         try:
             df = pd.read_sql_query(sql_str, con)
