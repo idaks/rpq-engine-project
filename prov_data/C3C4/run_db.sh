@@ -1,7 +1,5 @@
 export dbName='C3C4_facts.db'
 
-rm -rf $dbName
-
 ## set variables
 source ../settings.sh
 
