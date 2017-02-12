@@ -33,7 +33,7 @@ done
 ## create two views from C3C4_facts.db "yw_step_in" and "yw_step_out" 
 yw_step_input__view_sql_parts=(
     "create view yw_step_input as "
-    "select yw_model_facts_program.program_name, yw_model_facts_data.data_name "
+    "select yw_model_facts_data.data_name, yw_model_facts_program.program_name  "
     "from yw_model_facts_has_in_port, yw_model_facts_program, yw_model_facts_data,  yw_model_facts_port "
     "where yw_model_facts_has_in_port.block_id = yw_model_facts_program.program_id and "
     "yw_model_facts_port.port_id = yw_model_facts_has_in_port.port_id and  "
@@ -52,10 +52,19 @@ yw_step_output__view_sql_parts=(
 	)
 create_yw_step_output_view_statement=$(echo "${yw_step_output__view_sql_parts[*]}")
 		
+create_data_was_derived__view_sql_parts=(
+    "create view data_was_derived as "
+    "select yw_step_input.data_name, yw_step_output.data_name "
+    "from yw_step_input, yw_step_output "
+    "where  yw_step_input.program_name = yw_step_output.program_name ; "
+	)
+create_data_was_derived_view_statement=$(echo "${create_data_was_derived__view_sql_parts[*]}")
+		
 sqlite3 $dbName "$create_yw_step_input_view_statement"
 
 sqlite3 $dbName "$create_yw_step_output_view_statement"
 
+sqlite3 $dbName "$create_data_was_derived_view_statement"
 
 ## create a rpq table (startNode, endNode, label)
 create_rpq_statement='create table rpq_table(startNode text, endNode text, label text);'
@@ -67,6 +76,7 @@ create_labels_statement='create table labels(label text); ';
 sqlite3 $dbName "$create_labels_statement"
 sqlite3 $dbName "insert into labels(label) values('in');"
 sqlite3 $dbName "insert into labels(label) values('out');"
+sqlite3 $dbName "insert into labels(label) values('wasDerivedFrom');"
 
 ## populate the rpq table with the yw_step_input table
 populate_in_edge_sql_parts=(
@@ -88,3 +98,13 @@ populate_out_edge_sql_statement=$(echo "${populate_out_edge_sql_parts[*]}")
 
 sqlite3 $dbName "$populate_out_edge_sql_statement"		 
 		 
+## populate the rpq table with the data_was_derived table
+populate_derived_edge_sql_parts=(
+     "insert into rpq_table(startNode, endNode, label) "
+	 "select data_name, data_name, (select label from labels where labels.label='wasDerivedFrom') "
+     "from data_was_derived; "
+     )
+populate_derived_edge_sql_statement=$(echo "${populate_derived_edge_sql_parts[*]}")
+
+sqlite3 $dbName "$populate_derived_edge_sql_statement"	
+
