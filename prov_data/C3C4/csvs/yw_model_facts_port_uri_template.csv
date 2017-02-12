@@ -1,0 +1,13 @@
+port_id,uri
+1,inputs/land_cover/SYNMAP_NA_QD.nc
+2,file:inputs/narr_air.2m_monthly/air.2m_monthly_{start_year}_{end_year}_mean.{month}.nc
+3,file:inputs/narr_apcp_rescaled_monthly/apcp_monthly_{start_year}_{end_year}_mean.{month}.nc
+4,file:outputs/SYNMAP_PRESENTVEG_C3Grass_RelaFrac_NA_v2.0.nc
+5,file:outputs/SYNMAP_PRESENTVEG_C4Grass_RelaFrac_NA_v2.0.nc
+6,file:outputs/SYNMAP_PRESENTVEG_Grass_Fraction_NA_v2.0.nc
+7,inputs/land_cover/SYNMAP_NA_QD.nc
+12,file:inputs/narr_air.2m_monthly/air.2m_monthly_{start_year}_{end_year}_mean.{month}.nc
+14,file:inputs/narr_apcp_rescaled_monthly/apcp_monthly_{start_year}_{end_year}_mean.{month}.nc
+26,file:outputs/SYNMAP_PRESENTVEG_C3Grass_RelaFrac_NA_v2.0.nc
+32,file:outputs/SYNMAP_PRESENTVEG_C4Grass_RelaFrac_NA_v2.0.nc
+38,file:outputs/SYNMAP_PRESENTVEG_Grass_Fraction_NA_v2.0.nc

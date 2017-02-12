@@ -1,0 +1,13 @@
+uri_variable_id,variable_name,port_id
+1,start_year,2
+2,end_year,2
+3,month,2
+4,start_year,3
+5,end_year,3
+6,month,3
+7,start_year,12
+8,end_year,12
+9,month,12
+10,start_year,14
+11,end_year,14
+12,month,14

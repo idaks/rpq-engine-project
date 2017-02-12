@@ -1,0 +1,12 @@
+port_id,alias
+8,lon_variable
+9,lat_variable
+10,lon_bnds_variable
+11,lat_bnds_variable
+13,Tair_Matrix
+15,Rain_Matrix
+16,Grass_variable
+17,Tair_Matrix
+18,Rain_Matrix
+19,C3_Data
+20,C4_Data
