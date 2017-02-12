@@ -71,7 +71,7 @@ sqlite3 $dbName "insert into labels(label) values('out');"
 ## populate the rpq table with the yw_step_input table
 populate_in_edge_sql_parts=(
      "insert into rpq_table(startNode, endNode, label) "
-	 "select program_name, data_name, (select label from labels where labels.label='in') "
+	 "select data_name, program_name, (select label from labels where labels.label='in') "
      "from yw_step_input; "
      )
 populate_in_edge_sql_statement=$(echo "${populate_in_edge_sql_parts[*]}")
