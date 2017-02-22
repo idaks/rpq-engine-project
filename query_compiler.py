@@ -15,7 +15,6 @@ class sql_compiler:
             concatenate string that will be paesed into sql 
         '''
         with_rec ='WITH RECURSIVE '
-        print(self.dict_idx_sql)
         if(self.temp_num > 0):
             tables = self.dict_idx_sql[1]
             for i in range(2,self.temp_num+1):
@@ -26,11 +25,31 @@ class sql_compiler:
         print(sql_str)
         return sql_str
 
-    def literal(self, literal):
+    def node(self, node):
         '''
-            form the data with edge label literal into a temp table
+            input: 
+                node: node name
+            output: SQL string)
+        '''
+        self.temp_num += 1
+        temp_table = "temp"+str(self.temp_num)
+        parse =  '''
+        {0}(start, end) AS (
+            SELECT a.startNode, a.startNode FROM {1} AS a
+            WHERE a.startNode = {2}
+            UNION
+            SELECT a.endNode, a.endNode FROM {1} AS a
+            WHERE a.endNode = {2}
+        )
+        '''.format(temp_table, target_table, node)
+        return parse
+
+    def label(self, label):
+        #TODO: Maybe need quotation
+        '''
+            form the data with edge label into a temp table
             input: char
-            output: tuple(temp table idx, SQL string)
+            output: SQL string)
         '''
 
         self.temp_num += 1
@@ -40,7 +59,7 @@ class sql_compiler:
             SELECT {2}.startNode,{2}.endNode FROM {2}
             WHERE {2}.label = {1}
         )
-        '''.format(temp_table,literal,target_table)
+        '''.format(temp_table,label,target_table)
         return parse
 
 
@@ -49,7 +68,7 @@ class sql_compiler:
             input: 
                 leftChild: temp table idx
                 rightChild: temp table idx
-            output: tuple(temp table idx, SQL string)
+            output: SQL string)
         '''
 
         self.temp_num += 1
@@ -70,7 +89,7 @@ class sql_compiler:
             input: 
                 leftChild: temp table idx
                 rightChild: temp table idx
-            output: tuple(temp table idx, SQL string)
+            output: SQL string)
         '''
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
@@ -88,7 +107,7 @@ class sql_compiler:
         '''
             input: 
                 child: temp table idx
-            output: tuple(temp table idx, SQL string)
+            output: SQL string)
         '''
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
@@ -109,7 +128,7 @@ class sql_compiler:
         '''
             input: 
                 child: temp table idx
-            output: tuple(temp table idx, SQL string)
+            output: SQL string)
         '''
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
@@ -128,7 +147,7 @@ class sql_compiler:
         '''
             input: 
                 child: temp table idx
-            output: tuple(temp table idx, SQL string)
+            output: SQL string)
         '''
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
@@ -144,7 +163,7 @@ class sql_compiler:
         '''
             input: 
                 child: temp table idx
-            output: tuple(temp table idx, SQL string)
+            output: SQL string)
         '''
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
@@ -183,7 +202,7 @@ class Parser:
 
 class queryParser(Parser):
     # List of token names.   This is always required
-    tokens = ('EDGEID','LPAREN','RPAREN','OR','CONC','STAR', 'PLUS', 'MINUS', 'QMARK')
+    tokens = ('NODEID', 'EDGEID','LPAREN','RPAREN','OR','CONC','STAR', 'PLUS', 'MINUS', 'QMARK')
 
 # Regular expression rules for simple tokens
     t_LPAREN = r'\('
@@ -191,6 +210,7 @@ class queryParser(Parser):
     t_CONC = r'\.'
     t_OR = r'\|'
     t_STAR = r'\*'
+    t_NODEID= r'\[[a-zA-Z0-9_][a-zA-Z0-9_]*\]'
     t_EDGEID = r'[a-zA-Z0-9_][a-zA-Z0-9_]*'
     t_PLUS = r'\+'
     t_MINUS = r'\-'
@@ -213,12 +233,20 @@ class queryParser(Parser):
 # Parsing Expressions
     precedence = ( ('left', 'OR'), ('left', 'CONC'), ('left','STAR','PLUS', 'MINUS', 'QMARK'))
 
+    def p_expression_node(self, t):
+        ''' expression    : NODEID '''
+        print("Node")
+        t[0] = t[1]
+        if t[0] not in self.sql.dict_val_idx:
+            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.node(t[0][1:-1])
+            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
+
     def p_expressions_edge(self, t):
         '''expression    : EDGEID'''
         print("Edge")
         t[0] = t[1]
         if t[0] not in self.sql.dict_val_idx:
-            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.literal(t[0])
+            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.label(t[0])
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
         print(self.sql.dict_val_idx)
     
