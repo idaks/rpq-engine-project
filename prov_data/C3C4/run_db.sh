@@ -54,7 +54,7 @@ create_yw_step_output_view_statement=$(echo "${yw_step_output__view_sql_parts[*]
 		
 create_data_was_derived__view_sql_parts=(
     "create view data_was_derived as "
-    "select yw_step_input.data_name, yw_step_output.data_name "
+    "select yw_step_input.data_name as input_data_name, yw_step_output.data_name as output_data_name"
     "from yw_step_input, yw_step_output "
     "where  yw_step_input.program_name = yw_step_output.program_name ; "
 	)
@@ -101,7 +101,7 @@ sqlite3 $dbName "$populate_out_edge_sql_statement"
 ## populate the rpq table with the data_was_derived table
 populate_derived_edge_sql_parts=(
      "insert into rpq_table(startNode, endNode, label) "
-	 "select data_name, data_name, (select label from labels where labels.label='wasDerivedFrom') "
+	 "select input_data_name, output_data_name, (select label from labels where labels.label='wasDerivedFrom') "
      "from data_was_derived; "
      )
 populate_derived_edge_sql_statement=$(echo "${populate_derived_edge_sql_parts[*]}")

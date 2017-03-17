@@ -22,7 +22,8 @@ class sql_compiler:
         else:
             return None
         sql_str = "{}  {}  select * from temp{};".format(with_rec, tables, self.temp_num);
-        print(sql_str)
+        if debug:
+            print(sql_str)
         return sql_str
 
     def node(self, node):
@@ -31,6 +32,11 @@ class sql_compiler:
                 node: node name
             output: SQL string)
         '''
+        if isinstance(node, str): 
+            node_with_type = "\""+node+"\""
+        else:
+            # TODO: possibly add more type check
+            node_with_type = node
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
         parse =  '''
@@ -41,11 +47,16 @@ class sql_compiler:
             SELECT a.endNode, a.endNode FROM {1} AS a
             WHERE a.endNode = {2}
         )
-        '''.format(temp_table, target_table, node)
+        '''.format(temp_table, target_table, node_with_type)
         return parse
 
     def label(self, label):
         #TODO: Maybe need quotation
+        if isinstance(label, str): 
+            label_with_type = "\""+label+"\""
+        else:
+            # TODO: possibly add more type check
+            label_with_type = label
         '''
             form the data with edge label into a temp table
             input: char
@@ -59,7 +70,7 @@ class sql_compiler:
             SELECT {2}.startNode,{2}.endNode FROM {2}
             WHERE {2}.label = {1}
         )
-        '''.format(temp_table,label,target_table)
+        '''.format(temp_table,label_with_type,target_table)
         return parse
 
 
@@ -185,7 +196,8 @@ class Parser:
     precedence = ()
     
     def __init__(self):
-        print("init parser")
+        if debug:
+            print("init parser")
         self.sql = sql_compiler()
         lexer = lex.lex(module = self)
 
@@ -194,7 +206,8 @@ class Parser:
 
     def run(self, data):
         # Parse.
-        print(self.sql.dict_val_idx, self.sql.dict_idx_sql, self.sql.temp_num)
+        if debug:
+            print(self.sql.dict_val_idx, self.sql.dict_idx_sql, self.sql.temp_num)
         yacc.parse(data)
     
     def printList(self):
@@ -235,7 +248,8 @@ class queryParser(Parser):
 
     def p_expression_node(self, t):
         ''' expression    : NODEID '''
-        print("Node")
+        if debug:
+            print("Node")
         t[0] = t[1]
         if t[0] not in self.sql.dict_val_idx:
             self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.node(t[0][1:-1])
@@ -243,16 +257,18 @@ class queryParser(Parser):
 
     def p_expressions_edge(self, t):
         '''expression    : EDGEID'''
-        print("Edge")
         t[0] = t[1]
         if t[0] not in self.sql.dict_val_idx:
             self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.label(t[0])
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
-        print(self.sql.dict_val_idx)
+        if debug:
+            print("Edge")
+            print(self.sql.dict_val_idx)
     
     def p_expression_single(self, t):
         '''expression    : LPAREN expression RPAREN'''
-        print("()")
+        if debug:
+            print("()")
         t[0] = "(" + t[2] + ")"
         self.sql.dict_val_idx[t[0]] = self.sql.dict_val_idx[t[2]]
 
@@ -260,7 +276,8 @@ class queryParser(Parser):
         '''expression    : expression OR expression
                 | expression CONC expression'''
         if (t[2] == '|'):
-            print("Recursive Or")
+            if debug:
+                print("Recursive Or")
             t[0] = t[1] + "|" + t[3]
             if t[0] not in dict_val_idx:
                 leftChild = self.sql.dict_val_idx[t[1]]
@@ -268,7 +285,8 @@ class queryParser(Parser):
                 self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.OR(leftChild, rightChild)
                 self.sql.dict_val_idx[t[0]] = self.sql.temp_num
         else:
-            print("Recursive Conc")
+            if debug:
+                print("Recursive Conc")
             t[0] = t[1] + "." + t[3]
             if t[0] not in self.sql.dict_val_idx:
                 leftChild = self.sql.dict_val_idx[t[1]]
@@ -278,7 +296,8 @@ class queryParser(Parser):
 
     def p_expression_starEdge(self, t):
         '''expression    : expression STAR'''
-        print("Star on edge")
+        if debug:
+            print("Star on edge")
         t[0] = t[1] + "*"
         if t[0] not in self.sql.dict_val_idx:
             child = self.sql.dict_val_idx[t[1]]
@@ -287,7 +306,8 @@ class queryParser(Parser):
 
     def p_expression_plusEdge(self, t):
         '''expression    : expression PLUS'''
-        print("Plus on edge")
+        if debug:
+            print("Plus on edge")
         t[0] = t[1] + "+"
         if t[0] not in self.sql.dict_val_idx:
             child = self.sql.dict_val_idx[t[1]]
@@ -296,7 +316,8 @@ class queryParser(Parser):
 
     def p_expression_minusEdge(self, t):
         '''expression    : expression MINUS'''
-        print("Minus on edge")
+        if debug:
+            print("Minus on edge")
         t[0] = t[1] + "-"
         if t[0] not in self.sql.dict_val_idx:
             child = self.sql.dict_val_idx[t[1]]
@@ -305,7 +326,8 @@ class queryParser(Parser):
 
     def p_expression_qmarkEdge(self, t):
         '''expression    : expression QMARK'''
-        print("Optional on edge")
+        if debug:
+            print("Optional on edge")
         t[0] = t[1] + "?"
         if t[0] not in self.sql.dict_val_idx:
             child = self.sql.dict_val_idx[t[1]]
@@ -314,7 +336,8 @@ class queryParser(Parser):
 
     def p_expression_expression(self, t):
         '''expression    : expression expression'''
-        print("Concatenate two expressions")
+        if debug:
+            print("Concatenate two expressions")
         t[0] = t[1] + "." + t[2]
         if t[0] not in self.sql.dict_val_idx:
             leftChild = self.sql.dict_val_idx[t[1]]
@@ -330,13 +353,18 @@ class queryParser(Parser):
 
 if __name__ == '__main__':
     if (len(sys.argv) < 3):
-        print("Usage: python query_compiler.py (database) (table)")
+        print("Usage: python query_compiler.py (database) (table) (\"debug\")+")
         exit()
     global target_table            
+    global debug 
     # Read sqlite query results into a pandas DataFrame
     path = sys.argv[1]
     target_table = sys.argv[2]
     # "data/hamming.db"
+    if len(sys.argv) == 4 and sys.argv[3] in "debug":
+        debug = 1
+    else:
+        debug = 0
     con = sqlite3.connect(path)
     
     while 1:
