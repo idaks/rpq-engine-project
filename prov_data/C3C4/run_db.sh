@@ -37,9 +37,9 @@ yw_step_input__view_sql_parts=(
     "from yw_model_facts_has_in_port, yw_model_facts_program, yw_model_facts_data,  yw_model_facts_port "
     "where yw_model_facts_has_in_port.block_id = yw_model_facts_program.program_id and "
     "yw_model_facts_port.port_id = yw_model_facts_has_in_port.port_id and  "
-	" yw_model_facts_port.data_id = yw_model_facts_data.data_id ;"
+	" yw_model_facts_port.data_id = yw_model_facts_data.data_id and yw_model_facts_program.program_name != 'C3_C4_map_present_NA';"
 	)
-
+#  and yw_model_facts_program.program_name != 'C3_C4_map_present_NA'
 create_yw_step_input_view_statement=$(echo "${yw_step_input__view_sql_parts[*]}")
 
 yw_step_output__view_sql_parts=(
@@ -48,15 +48,21 @@ yw_step_output__view_sql_parts=(
     "from yw_model_facts_has_out_port, yw_model_facts_program, yw_model_facts_data, yw_model_facts_port "
     "where  yw_model_facts_has_out_port.block_id = yw_model_facts_program.program_id and "
     "yw_model_facts_port.port_id = yw_model_facts_has_out_port.port_id and  "
-	"yw_model_facts_port.data_id = yw_model_facts_data.data_id; "
-	)
+    "yw_model_facts_port.data_id = yw_model_facts_data.data_id and yw_model_facts_program.program_name != 'C3_C4_map_present_NA'; "
+    )
+
 create_yw_step_output_view_statement=$(echo "${yw_step_output__view_sql_parts[*]}")
 		
 create_data_was_derived__view_sql_parts=(
-    "create view data_was_derived as "
-    "select yw_step_input.data_name as input_data_name, yw_step_output.data_name as output_data_name"
-    "from yw_step_input, yw_step_output "
-    "where  yw_step_input.program_name = yw_step_output.program_name ; "
+    "create table data_was_derived as "
+    "WITH RECURSIVE in_out(input_data_name, output_data_name) AS"
+    "(select yw_step_input.data_name, yw_step_output.data_name from yw_step_input, yw_step_output "
+    "where yw_step_input.program_name = yw_step_output.program_name), "
+    "derived(input_data_name, output_data_name) AS"
+    "(select * from in_out UNION ALL "
+    "select in_out.input_data_name, derived.output_data_name from in_out, derived "
+    "WHERE in_out.output_data_name = derived.input_data_name) "
+    "SELECT * FROM derived;"
 	)
 create_data_was_derived_view_statement=$(echo "${create_data_was_derived__view_sql_parts[*]}")
 		
@@ -106,5 +112,5 @@ populate_derived_edge_sql_parts=(
      )
 populate_derived_edge_sql_statement=$(echo "${populate_derived_edge_sql_parts[*]}")
 
-sqlite3 $dbName "$populate_derived_edge_sql_statement"	
+sqlite3 $dbName "$populate_derived_edge_sql_statement"
 
