@@ -6,6 +6,7 @@ import lex
 
 class sql_compiler:
     def __init__(self):
+        print("-------------------------------------")
         self.dict_val_idx = {}
         self.dict_idx_sql = {}
         self.temp_num = 0
@@ -14,6 +15,7 @@ class sql_compiler:
         '''
             concatenate string that will be paesed into sql 
         '''
+        print(self.dict_idx_sql)
         with_rec ='WITH RECURSIVE '
         if(self.temp_num > 0):
             tables = self.dict_idx_sql[1]
@@ -39,15 +41,31 @@ class sql_compiler:
             node_with_type = node
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
-        parse =  '''
-        {0}(start, end) AS (
-            SELECT a.startNode, a.startNode FROM {1} AS a
-            WHERE a.startNode = {2}
-            UNION
-            SELECT a.endNode, a.endNode FROM {1} AS a
-            WHERE a.endNode = {2}
-        )
-        '''.format(temp_table, target_table, node_with_type)
+        if "-5" in sys.argv:
+            parse =  '''
+            {0}(start, end, inter_start, label, inter_end) AS (
+                SELECT a.startNode, a.startNode, 
+                a.startNode, "node_self" AS label, a.startNode 
+                FROM {1} AS a
+                WHERE a.startNode = {2}
+                UNION
+                SELECT a.endNode, a.endNode,  
+                a.endNode, "node_self" AS label, a.endNode 
+                FROM {1} AS a
+                WHERE a.endNode = {2}
+            )
+            '''.format(temp_table, target_table, node_with_type)
+        else:
+            parse =  '''
+            {0}(start, end) AS (
+                SELECT a.startNode, a.startNode FROM {1} AS a
+                WHERE a.startNode = {2}
+                UNION
+                SELECT a.endNode, a.endNode FROM {1} AS a
+                WHERE a.endNode = {2}
+            )
+            '''.format(temp_table, target_table, node_with_type)
+        self.dict_idx_sql[self.temp_num] = parse
         return parse
 
     def label(self, label):
@@ -62,15 +80,25 @@ class sql_compiler:
             input: char
             output: SQL string)
         '''
-
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
-        parse =  '''
-        {0}(start, end) AS (
-            SELECT {2}.startNode,{2}.endNode FROM {2}
-            WHERE {2}.label = {1}
-        )
-        '''.format(temp_table,label_with_type,target_table)
+        if "-5" in sys.argv:
+            parse =  '''
+            {0}(start, end, inter_start, label, inter_end) AS (
+                SELECT {2}.startNode,{2}.endNode, 
+                {2}.startNode, {1} AS label, {2}.endNode 
+                FROM {2}
+                WHERE {2}.label = {1}
+            )
+            '''.format(temp_table,label_with_type,target_table)
+        else:
+            parse =  '''
+            {0}(start, end) AS (
+                SELECT {2}.startNode,{2}.endNode FROM {2}
+                WHERE {2}.label = {1}
+            )
+            '''.format(temp_table,label_with_type,target_table)
+        self.dict_idx_sql[self.temp_num] = parse
         return parse
 
 
@@ -86,13 +114,23 @@ class sql_compiler:
         temp_table = "temp"+str(self.temp_num)
         leftChild_table = "temp"+str(leftChild)
         rightChild_table = "temp"+str(rightChild)
-        parse =  '''
-        {0}(start, end) AS (
-            SELECT * FROM {1}
-            UNION
-            SELECT * FROM {2}
-        )
-        '''.format(temp_table,leftChild_table, rightChild_table)
+        if "-5" in sys.argv:
+            parse =  '''
+            {0}(start, end, inter_start, label, inter_end) AS (
+                SELECT * FROM {1}
+                UNION
+                SELECT * FROM {2}
+            )
+            '''.format(temp_table,leftChild_table, rightChild_table)
+        else:
+            parse =  '''
+            {0}(start, end) AS (
+                SELECT * FROM {1}
+                UNION
+                SELECT * FROM {2}
+            )
+            '''.format(temp_table,leftChild_table, rightChild_table)
+        self.dict_idx_sql[self.temp_num] = parse
         return parse
 
     def CONC(self, leftChild, rightChild):
@@ -106,12 +144,41 @@ class sql_compiler:
         temp_table = "temp"+str(self.temp_num)
         leftChild_table = "temp"+str(leftChild)
         rightChild_table = "temp"+str(rightChild)
-        parse =  '''
-        {0}(start, end) AS (
-            SELECT a.start, b.end FROM {1} AS a,{2} AS b
-            WHERE a.end = b.start
-        )
-        '''.format(temp_table,leftChild_table, rightChild_table)
+        if "-5" in sys.argv:
+            # rpq only with starting, and ending nodes
+            rpq2 =  '''
+            {0}(start, internal, end) AS (
+                SELECT a.start, a.end, b.end  FROM {1} AS a,{2} AS b
+                WHERE a.end = b.start
+            )
+            '''.format(temp_table,leftChild_table, rightChild_table)
+            self.dict_idx_sql[self.temp_num] = rpq2 
+
+            self.temp_num += 1
+            temp_table2 = "temp"+str(self.temp_num)
+            rpq4 =  '''
+            {0}(start, end, inter_start, label, inter_end) AS (
+                SELECT rpq2.start, rpq2.end, 
+                a.inter_start, a.label, a.inter_end 
+                FROM {1} AS rpq2, {2} AS a
+                WHERE rpq2.internal = a.end AND rpq2.start = a.start
+                UNION
+                SELECT rpq2.start, rpq2.end, 
+                b.inter_start, b.label, b.inter_end 
+                FROM {1} AS rpq2, {3} AS b
+                WHERE rpq2.internal = b.start AND rpq2.end = b.end
+            )
+            '''.format(temp_table2, temp_table, leftChild_table, rightChild_table)
+            self.dict_idx_sql[self.temp_num] = rpq4
+            parse = '{}\n{}'.format(rpq2, rpq4)
+        else:
+            parse =  '''
+            {0}(start, end) AS (
+                SELECT a.start, b.end FROM {1} AS a,{2} AS b
+                WHERE a.end = b.start
+            )
+            '''.format(temp_table,leftChild_table, rightChild_table)
+            self.dict_idx_sql[self.temp_num] = parse
         return parse
 
     def STAR(self, child):
@@ -123,16 +190,53 @@ class sql_compiler:
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
         child_table = "temp"+str(child)
-        parse =  '''
-            {0}(start, end) AS (
-                SELECT {2}.startNode,{2}.startNode FROM {2}
-                UNION 
-                SELECT {2}.endNode,{2}.endNode FROM {2}
-                UNION
-                SELECT a.start, b.end FROM {0} AS a,{1} AS b
-                WHERE a.end = b.start
-            )
-        '''.format(temp_table,child_table, target_table)
+        if "-5" in sys.argv:
+            rpq2 =  '''
+                {0}(start, internal, end) AS (
+                    SELECT {2}.startNode,NULL, {2}.startNode 
+                    FROM {2}
+                    UNION 
+                    SELECT {2}.endNode,NULL, {2}.endNode 
+                    FROM {2}
+                    UNION
+                    SELECT a.start, a.end, b.end FROM {0} AS a,{1} AS b
+                    WHERE a.end = b.start
+                )
+            '''.format(temp_table,child_table, target_table)
+            self.dict_idx_sql[self.temp_num] = rpq2
+            
+            self.temp_num += 1
+            temp_table2 = "temp"+str(self.temp_num)
+            rpq5 =  '''
+                {0}(start, end, inter_start, label, inter_end) AS (
+                    SELECT {3}.startNode,{3}.startNode, 
+                    {3}.startNode, "empty_star" AS label, {3}.startNode
+                    FROM {3}
+                    UNION 
+                    SELECT {3}.endNode,{3}.endNode, 
+                    {3}.endNode, "empty_star" AS label, {3}.endNode
+                    FROM {3}
+                    UNION
+                    SELECT a.start, a.end,
+                    b.inter_start, b.label, b.inter_end
+                    FROM {1} AS a,{2} AS b
+                    WHERE a.internal = b.start
+                )
+            '''.format(temp_table2, temp_table, child_table, target_table)
+            self.dict_idx_sql[self.temp_num] = rpq5
+            parse = "{}\n{}".format(rpq2, rpq5)
+        else:
+            parse =  '''
+                {0}(start, end) AS (
+                    SELECT {2}.startNode,{2}.startNode FROM {2}
+                    UNION 
+                    SELECT {2}.endNode,{2}.endNode FROM {2}
+                    UNION
+                    SELECT a.start, b.end FROM {0} AS a,{1} AS b
+                    WHERE a.end = b.start
+                )
+            '''.format(temp_table,child_table, target_table)
+            self.dict_idx_sql[self.temp_num] = parse
         return parse
 
     def PLUS(self, child):
@@ -144,14 +248,17 @@ class sql_compiler:
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
         child_table = "temp"+str(child)
-        parse =  '''
-            {0}(start, end) AS (
-                SELECT * FROM {1}
-                UNION
-                SELECT a.start, b.end FROM {0} AS a,{1} AS b
-                WHERE a.end = b.start
-            )
-        '''.format(temp_table,child_table)
+        if "-5" in sys.argv:
+            pass
+        else:
+            parse =  '''
+                {0}(start, end) AS (
+                    SELECT * FROM {1}
+                    UNION
+                    SELECT a.start, b.end FROM {0} AS a,{1} AS b
+                    WHERE a.end = b.start
+                )
+            '''.format(temp_table,child_table)
         return parse
 
     def MINUS(self,child):
@@ -163,11 +270,14 @@ class sql_compiler:
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
         child_table = "temp"+str(child)
-        parse =  '''
-            {0}(start, end) AS (
-                SELECT {1}.end, {1}.start FROM {1} 
-            )
-        '''.format(temp_table,child_table)
+        if "-5" in sys.argv:
+            pass
+        else:
+            parse =  '''
+                {0}(start, end) AS (
+                    SELECT {1}.end, {1}.start FROM {1} 
+                )
+            '''.format(temp_table,child_table)
         return parse
 
     def QMARK(self, child):
@@ -179,15 +289,18 @@ class sql_compiler:
         self.temp_num += 1
         temp_table = "temp"+str(self.temp_num)
         child_table = "temp"+str(child)
-        parse =  '''
-            {0}(start, end) AS (
-                SELECT {2}.startNode,{2}.startNode FROM {2}
-                UNION 
-                SELECT {2}.endNode,{2}.endNode FROM {2}
-                UNION
-                SELECT * FROM {1}
-            )
-        '''.format(temp_table,child_table,target_table)
+        if "-5" in sys.argv:
+            pass
+        else:
+            parse =  '''
+                {0}(start, end) AS (
+                    SELECT {2}.startNode,{2}.startNode FROM {2}
+                    UNION 
+                    SELECT {2}.endNode,{2}.endNode FROM {2}
+                    UNION
+                    SELECT * FROM {1}
+                )
+            '''.format(temp_table,child_table,target_table)
         return parse
 
 class Parser:
@@ -252,14 +365,17 @@ class queryParser(Parser):
             print("Node")
         t[0] = t[1]
         if t[0] not in self.sql.dict_val_idx:
-            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.node(t[0][1:-1])
+            self.sql.node(t[0][1:-1])
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
+        if debug:
+            print("Node")
+            print(self.sql.dict_val_idx)
 
     def p_expressions_edge(self, t):
         '''expression    : EDGEID'''
         t[0] = t[1]
         if t[0] not in self.sql.dict_val_idx:
-            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.label(t[0])
+            self.sql.label(t[0])
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
         if debug:
             print("Edge")
@@ -279,11 +395,12 @@ class queryParser(Parser):
             if debug:
                 print("Recursive Or")
             t[0] = t[1] + "|" + t[3]
-            if t[0] not in dict_val_idx:
+            if t[0] not in self.sql.dict_val_idx:
                 leftChild = self.sql.dict_val_idx[t[1]]
                 rightChild = self.sql.dict_val_idx[t[3]]
-                self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.OR(leftChild, rightChild)
+                self.sql.OR(leftChild, rightChild)
                 self.sql.dict_val_idx[t[0]] = self.sql.temp_num
+            print(self.sql.dict_val_idx)
         else:
             if debug:
                 print("Recursive Conc")
@@ -291,8 +408,9 @@ class queryParser(Parser):
             if t[0] not in self.sql.dict_val_idx:
                 leftChild = self.sql.dict_val_idx[t[1]]
                 rightChild = self.sql.dict_val_idx[t[3]]
-                self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.CONC(leftChild, rightChild)
+                self.sql.CONC(leftChild, rightChild)
                 self.sql.dict_val_idx[t[0]] = self.sql.temp_num
+            print(self.sql.dict_val_idx)
 
     def p_expression_starEdge(self, t):
         '''expression    : expression STAR'''
@@ -301,7 +419,7 @@ class queryParser(Parser):
         t[0] = t[1] + "*"
         if t[0] not in self.sql.dict_val_idx:
             child = self.sql.dict_val_idx[t[1]]
-            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.STAR(child)
+            self.sql.STAR(child)
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
     def p_expression_plusEdge(self, t):
@@ -342,7 +460,7 @@ class queryParser(Parser):
         if t[0] not in self.sql.dict_val_idx:
             leftChild = self.sql.dict_val_idx[t[1]]
             rightChild = self.sql.dict_val_idx[t[2]]
-            self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.CONC(leftChild, rightChild)
+            self.sql.CONC(leftChild, rightChild)
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
     def p_error(self, p):
@@ -361,7 +479,7 @@ if __name__ == '__main__':
     path = sys.argv[1]
     target_table = sys.argv[2]
     # "data/hamming.db"
-    if len(sys.argv) == 4 and sys.argv[3] in "debug":
+    if len(sys.argv) >= 4 and "debug" in sys.argv :
         debug = 1
     else:
         debug = 0
