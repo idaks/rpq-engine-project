@@ -58,3 +58,24 @@ fish(X,5,Y) :- fish(_,_,X), Y = 5*X.
 % Count total numbers
 
 fish_edges(N) :- #count{X,L,Y : fish(X,L,Y)} = N.
+
+
+
+
+% This is the RPQ engine 
+
+% conc(2,3,"2.3").
+sail(X,L_conc_M,Y) :- conc(L,M, L_conc_M), sail(X,L,Z), sail(Z,M,Y).
+fish(X,L_conc_M,Y) :- conc(L,M, L_conc_M), fish(X,L,Z), fish(Z,M,Y).
+
+% or(2,3,"2|3").
+sail(X,L_or_M,Y) :- or(L,_, L_or_M), sail(X,L,Y).
+sail(X,L_or_M,Y) :- or(_,M, L_or_M), sail(X,M,Y).
+
+% plus(2,"2+").
+sail(X,L_plus,Y) :- plus(L, L_plus), sail(X,L,Y).
+sail(X,L_plus,Y) :- plus(L, L_plus), sail(X,L,Z), sail(Z,L_plus,Y).
+
+% star(2,"2*").
+sail(X,L_star,X) :- star(L, L_star), sail(X,L,X).
+sail(X,L_star,Y) :- star(L, L_star), sail(X,L,Z), sail(Z,L_star,Y).
