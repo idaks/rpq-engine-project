@@ -3,10 +3,10 @@ import pandas as pd
 import sqlite3
 import yacc
 import lex
+import argparse
 
 class sql_compiler:
     def __init__(self):
-        print("-------------------------------------")
         self.dict_val_idx = {}
         self.dict_idx_sql = {}
         self.temp_num = 0
@@ -15,7 +15,6 @@ class sql_compiler:
         '''
             concatenate string that will be paesed into sql 
         '''
-        print(self.dict_idx_sql)
         with_rec ='WITH RECURSIVE '
         if(self.temp_num > 0):
             tables = self.dict_idx_sql[1]
@@ -361,8 +360,6 @@ class queryParser(Parser):
 
     def p_expression_node(self, t):
         ''' expression    : NODEID '''
-        if debug:
-            print("Node")
         t[0] = t[1]
         if t[0] not in self.sql.dict_val_idx:
             self.sql.node(t[0][1:-1])
@@ -400,7 +397,6 @@ class queryParser(Parser):
                 rightChild = self.sql.dict_val_idx[t[3]]
                 self.sql.OR(leftChild, rightChild)
                 self.sql.dict_val_idx[t[0]] = self.sql.temp_num
-            print(self.sql.dict_val_idx)
         else:
             if debug:
                 print("Recursive Conc")
@@ -410,7 +406,6 @@ class queryParser(Parser):
                 rightChild = self.sql.dict_val_idx[t[3]]
                 self.sql.CONC(leftChild, rightChild)
                 self.sql.dict_val_idx[t[0]] = self.sql.temp_num
-            print(self.sql.dict_val_idx)
 
     def p_expression_starEdge(self, t):
         '''expression    : expression STAR'''
@@ -470,38 +465,56 @@ class queryParser(Parser):
                 print("Syntax error at EOF")
 
 if __name__ == '__main__':
-    if (len(sys.argv) < 3):
-        print("Usage: python query_compiler.py (database) (table) (\"debug\")+")
-        exit()
+    parser = argparse.ArgumentParser(description='Regular Path Query Engine')
+    parser.add_argument('database', help='SQL Database to query')
+    parser.add_argument('table', help='Table name in the database')
+    parser.add_argument('-debug', action='store_true', help='Debug Mode')
+    parser.add_argument('-c', nargs='+', help='command line mode')
+    args = parser.parse_args()
+
     global target_table            
     global debug 
     # Read sqlite query results into a pandas DataFrame
-    path = sys.argv[1]
-    target_table = sys.argv[2]
-    # "data/hamming.db"
-    if len(sys.argv) >= 4 and "debug" in sys.argv :
+    path = args.database
+    target_table = args.table
+
+    # debug mode
+    if args.debug:
         debug = 1
     else:
         debug = 0
     con = sqlite3.connect(path)
     
-    while 1:
-        try:
-            s = raw_input('rpq > ')
-        except EOFError:
-            break
-        if not s:
-            continue
-        print('Query: {}\nParsing...\n'.format(s))
-        calc = queryParser()
-        calc.run(s)
-        sql_str = calc.sql.sql_generation()
-        # print(sql_str)
-        try:
-            df = pd.read_sql_query(sql_str, con)
-            pd.set_option('display.max_rows', len(df))
-            print(df)
-        except:
-            print("Query Failed!")
+    if not args.c:
+        while 1:
+            try:
+                s = raw_input('rpq > ')
+            except EOFError:
+                break
+            if not s:
+                continue
+            print('Query: {}\nParsing...\n'.format(s))
+            calc = queryParser()
+            calc.run(s)
+            sql_str = calc.sql.sql_generation()
+            try:
+                df = pd.read_sql_query(sql_str, con)
+                pd.set_option('display.max_rows', len(df))
+                print(df)
+            except:
+                print("Query Failed!")
+    else:
+        for c in args.c:
+            print('Query: {}\nParsing...\n'.format(c))
+            calc = queryParser()
+            calc.run(c)
+            sql_str = calc.sql.sql_generation()
+            try:
+                df = pd.read_sql_query(sql_str, con)
+                pd.set_option('display.max_rows', len(df))
+                print(df)
+            except:
+                print("Query Failed!")
+
 
     con.close()
