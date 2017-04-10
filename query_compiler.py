@@ -352,7 +352,7 @@ class queryParser(Parser):
 
 # Error handling rule
     def t_error(self, t):
-        print "Illegal character '%s'" % t.value[0]
+        print "Illegal character '{:s}'".format( t.value[0])
         t.lexer.skip(1)
 
 # Parsing Expressions
@@ -464,6 +464,22 @@ class queryParser(Parser):
             else:
                 print("Syntax error at EOF")
 
+def checkConnection(path, table):
+    flag = 0
+    try:
+        con = sqlite3.connect(path)
+        tableExist = "SELECT name FROM sqlite_master WHERE type='table' AND name='{}';".format(table)
+        df = pd.read_sql_query(tableExist, con)
+        if df.empty:
+            print("Can't establish connection. Check path to the database and the table name.")
+            flag = 1
+    except:
+        print("Can't establish connection. Check path to the database and the table name.")
+        flag = 1
+    if flag == 1:
+        exit()
+    return con
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Regular Path Query Engine')
     parser.add_argument('database', help='SQL Database to query')
@@ -483,7 +499,9 @@ if __name__ == '__main__':
         debug = 1
     else:
         debug = 0
-    con = sqlite3.connect(path)
+
+    # check if the connection to table is valid
+    con = checkConnection(path, target_table)
     
     if not args.c:
         while 1:
