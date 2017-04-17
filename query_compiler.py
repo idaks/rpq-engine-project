@@ -311,16 +311,14 @@ class Parser:
         if debug:
             print("init parser")
         self.sql = sql_compiler()
-        lexer = lex.lex(module = self)
+        lexer = lex.lex(module = self, debug = debug)
 
         # Build the parser
         yacc.yacc(module=self)
 
     def run(self, data):
         # Parse.
-        if debug:
-            print(self.sql.dict_val_idx, self.sql.dict_idx_sql, self.sql.temp_num)
-        yacc.parse(data)
+        yacc.parse(data, debug=debug)
     
     def printList(self):
         pass
@@ -328,6 +326,15 @@ class Parser:
 class queryParser(Parser):
     # List of token names.   This is always required
     tokens = ('NODEID', 'EDGEID','LPAREN','RPAREN','OR','CONC','STAR', 'PLUS', 'MINUS', 'QMARK')
+    # Parsing Expressions
+    precedence = ( 
+            ('left', 'EXP'), 
+            ('nonassoc', 'EDGEID', 'NODEID'),
+            ('left', 'OR'), 
+            ('left', 'CONC'), 
+            ('left', 'STAR', 'PLUS', 'MINUS', 'QMARK'),
+            )
+
 
 # Regular expression rules for simple tokens
     t_LPAREN = r'\('
@@ -355,28 +362,9 @@ class queryParser(Parser):
         print "Illegal character '{:s}'".format( t.value[0])
         t.lexer.skip(1)
 
-# Parsing Expressions
-    precedence = ( ('left', 'OR'), ('left', 'CONC'), ('left','STAR','PLUS', 'MINUS', 'QMARK'))
-
-    def p_expression_node(self, t):
-        ''' expression    : NODEID '''
+    def p_expression_label(self, t):
+        '''expression : label'''
         t[0] = t[1]
-        if t[0] not in self.sql.dict_val_idx:
-            self.sql.node(t[0][1:-1])
-            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
-        if debug:
-            print("Node")
-            print(self.sql.dict_val_idx)
-
-    def p_expressions_edge(self, t):
-        '''expression    : EDGEID'''
-        t[0] = t[1]
-        if t[0] not in self.sql.dict_val_idx:
-            self.sql.label(t[0])
-            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
-        if debug:
-            print("Edge")
-            print(self.sql.dict_val_idx)
     
     def p_expression_single(self, t):
         '''expression    : LPAREN expression RPAREN'''
@@ -387,7 +375,8 @@ class queryParser(Parser):
 
     def p_expression_recursiveBinary(self, t):
         '''expression    : expression OR expression
-                | expression CONC expression'''
+                         | expression CONC expression
+        '''
         if (t[2] == '|'):
             if debug:
                 print("Recursive Or")
@@ -447,8 +436,9 @@ class queryParser(Parser):
             self.sql.dict_idx_sql[self.sql.temp_num] = self.sql.QMARK(child)
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
+    # Keep or delete
     def p_expression_expression(self, t):
-        '''expression    : expression expression'''
+        '''expression    : expression expression %prec EXP'''
         if debug:
             print("Concatenate two expressions")
         t[0] = t[1] + "." + t[2]
@@ -458,6 +448,25 @@ class queryParser(Parser):
             self.sql.CONC(leftChild, rightChild)
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
+    def p_label_node(self, t):
+        ''' label    : NODEID '''
+        t[0] = t[1]
+        if t[0] not in self.sql.dict_val_idx:
+            self.sql.node(t[0][1:-1])
+            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
+        if debug:
+            print("Node")
+            print(self.sql.dict_val_idx)
+
+    def p_label_edge(self, t):
+        '''label    : EDGEID'''
+        t[0] = t[1]
+        if t[0] not in self.sql.dict_val_idx:
+            self.sql.label(t[0])
+            self.sql.dict_val_idx[t[0]] = self.sql.temp_num
+        if debug:
+            print("Edge")
+            print(self.sql.dict_val_idx)
     def p_error(self, p):
             if p:
                 print("Syntax error at '%s'" % p.value)
