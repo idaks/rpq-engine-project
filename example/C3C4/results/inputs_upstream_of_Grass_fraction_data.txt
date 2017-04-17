@@ -1,0 +1,6 @@
+Grass_variable
+SYNMAP_land_cover_map_data
+lat_bnds_variable
+lat_variable
+lon_bnds_variable
+lon_variable

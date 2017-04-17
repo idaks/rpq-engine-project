@@ -1,0 +1,10 @@
+C3_Data
+Rain_Matrix
+SYNMAP_land_cover_map_data
+Tair_Matrix
+lat_bnds_variable
+lat_variable
+lon_bnds_variable
+lon_variable
+mean_airtemp
+mean_precip

@@ -1,2 +1,2 @@
 # clean
-rm -rf Query*.txt *.csv *.db
+rm -rf results/ *.csv *.db parse*

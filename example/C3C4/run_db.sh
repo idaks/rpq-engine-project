@@ -82,6 +82,8 @@ create_labels_statement='create table labels(label text); ';
 sqlite3 $dbName "$create_labels_statement"
 sqlite3 $dbName "insert into labels(label) values('in');"
 sqlite3 $dbName "insert into labels(label) values('out');"
+sqlite3 $dbName "insert into labels(label) values('genby');"
+sqlite3 $dbName "insert into labels(label) values('used');"
 sqlite3 $dbName "insert into labels(label) values('wasDerivedFrom');"
 
 ## populate the rpq table with the yw_step_input table
@@ -94,6 +96,15 @@ populate_in_edge_sql_statement=$(echo "${populate_in_edge_sql_parts[*]}")
 
 sqlite3 $dbName "$populate_in_edge_sql_statement"
 
+populate_used_edge_sql_parts=(
+     "insert into rpq_table(startNode, endNode, label) "
+	 "select program_name, data_name, (select label from labels where labels.label='used') "
+     "from yw_step_input; "
+     )
+populate_used_edge_sql_statement=$(echo "${populate_used_edge_sql_parts[*]}")
+
+sqlite3 $dbName "$populate_used_edge_sql_statement"
+
 ## populate the rpq table with the yw_step_output table
 populate_out_edge_sql_parts=(
      "insert into rpq_table(startNode, endNode, label) "
@@ -104,6 +115,15 @@ populate_out_edge_sql_statement=$(echo "${populate_out_edge_sql_parts[*]}")
 
 sqlite3 $dbName "$populate_out_edge_sql_statement"		 
 		 
+populate_genby_edge_sql_parts=(
+     "insert into rpq_table(startNode, endNode, label) "
+	 "select data_name, program_name,(select label from labels where labels.label='genby') "
+     "from yw_step_output; "
+     )
+populate_genby_edge_sql_statement=$(echo "${populate_genby_edge_sql_parts[*]}")
+
+sqlite3 $dbName "$populate_genby_edge_sql_statement"		 
+
 ## populate the rpq table with the data_was_derived table
 populate_derived_edge_sql_parts=(
      "insert into rpq_table(startNode, endNode, label) "

@@ -325,11 +325,11 @@ class Parser:
 
 class queryParser(Parser):
     # List of token names.   This is always required
-    tokens = ('NODEID', 'EDGEID','LPAREN','RPAREN','OR','CONC','STAR', 'PLUS', 'MINUS', 'QMARK')
+    tokens = ('DATAID', 'LABELID','LPAREN','RPAREN','OR','CONC','STAR', 'PLUS', 'MINUS', 'QMARK')
     # Parsing Expressions
     precedence = ( 
             ('left', 'EXP'), 
-            ('nonassoc', 'EDGEID', 'NODEID'),
+            ('nonassoc', 'LABELID', 'DATAID'),
             ('left', 'OR'), 
             ('left', 'CONC'), 
             ('left', 'STAR', 'PLUS', 'MINUS', 'QMARK'),
@@ -342,8 +342,8 @@ class queryParser(Parser):
     t_CONC = r'\.'
     t_OR = r'\|'
     t_STAR = r'\*'
-    t_NODEID= r'\[[a-zA-Z0-9_][a-zA-Z0-9_]*\]'
-    t_EDGEID = r'[a-zA-Z0-9_][a-zA-Z0-9_]*'
+    t_DATAID= r'\[[a-zA-Z0-9_][a-zA-Z0-9_]*\]'
+    t_LABELID = r'[a-zA-Z0-9_][a-zA-Z0-9_]*'
     t_PLUS = r'\+'
     t_MINUS = r'\-'
     t_QMARK = r'\?'
@@ -362,8 +362,8 @@ class queryParser(Parser):
         print "Illegal character '{:s}'".format( t.value[0])
         t.lexer.skip(1)
 
-    def p_expression_label(self, t):
-        '''expression : label'''
+    def p_expression_artifact(self, t):
+        '''expression : artifact'''
         t[0] = t[1]
     
     def p_expression_single(self, t):
@@ -448,24 +448,24 @@ class queryParser(Parser):
             self.sql.CONC(leftChild, rightChild)
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
 
-    def p_label_node(self, t):
-        ''' label    : NODEID '''
+    def p_artifact_data(self, t):
+        ''' artifact    : DATAID '''
         t[0] = t[1]
         if t[0] not in self.sql.dict_val_idx:
             self.sql.node(t[0][1:-1])
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
         if debug:
-            print("Node")
+            print("Data")
             print(self.sql.dict_val_idx)
 
-    def p_label_edge(self, t):
-        '''label    : EDGEID'''
+    def p_artifact_edge(self, t):
+        '''artifact    : LABELID'''
         t[0] = t[1]
         if t[0] not in self.sql.dict_val_idx:
             self.sql.label(t[0])
             self.sql.dict_val_idx[t[0]] = self.sql.temp_num
         if debug:
-            print("Edge")
+            print("Label")
             print(self.sql.dict_val_idx)
     def p_error(self, p):
             if p:
@@ -532,7 +532,6 @@ if __name__ == '__main__':
                 print("Query Failed!")
     else:
         for c in args.c:
-            print('Query: {}\nParsing...\n'.format(c))
             calc = queryParser()
             calc.run(c)
             sql_str = calc.sql.sql_generation()

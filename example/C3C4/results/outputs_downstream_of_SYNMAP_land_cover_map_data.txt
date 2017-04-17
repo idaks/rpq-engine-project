@@ -1,0 +1,7 @@
+C3_fraction_data
+C4_fraction_data
+Grass_fraction_data
+lat_bnds_variable
+lat_variable
+lon_bnds_variable
+lon_variable
