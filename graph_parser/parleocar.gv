@@ -1,0 +1,123 @@
+
+/* Start of top-level graph */
+digraph Workflow {
+rankdir=TB
+
+/* Title for graph */
+fontname=Helvetica; fontsize=18; labelloc=t
+label=gen_paleocar_model
+
+/* Start of double cluster for drawing box around nodes in workflow */
+subgraph cluster_workflow_box_outer { label=""; color=black; penwidth=2
+subgraph cluster_workflow_box_inner { label=""; penwidth=0
+
+/* Style for nodes representing atomic programs in workflow */
+node[shape=box style=filled fillcolor="#CCFFCC" peripheries=1 fontname=Helvetica]
+
+/* Nodes representing atomic programs in workflow */
+print_message [shape=record rankdir=LR label="{<f0> print_message |<f1> writing messages to the command line, if the variable is set.}"];
+get_predictor_matrix [shape=record rankdir=LR label="{<f0> get_predictor_matrix |<f1> create a matrix of tree ring chronologies for the calibration year.}"];
+get_reconstruction_matrix [shape=record rankdir=LR label="{<f0> get_reconstruction_matrix |<f1> get reconstruction matrix for chronologies for the prediction year.}"];
+get_predlist [shape=record rankdir=LR label="{<f0> get_predlist |<f1> create list of prediction values.}"];
+get_carscores [shape=record rankdir=LR label="{<f0> get_carscores |<f1> get the carscores for reconstruction of paleoclimate.}"];
+optimizeModels
+
+/* Style for nodes representing composite programs (sub-workflows) in workflow */
+node[shape=box style=filled fillcolor="#CCFFCC" peripheries=2 fontname=Helvetica]
+
+/* Nodes representing composite programs (sub-workflows) in workflow */
+calculate_Models
+
+/* Style for nodes representing non-parameter data channels in workflow */
+node[shape=box style="rounded,filled" fillcolor="#FFFFCC" peripheries=1 fontname=Helvetica]
+
+/* Nodes for non-parameter data channels in workflow */
+paleocar_models [shape=record rankdir=LR label="{<f0> paleocar_models |<f1> file\:.output/\{session_id\}/\{run_id\}/\{label\}_model.Rds}"];
+verbose
+itrdb
+prediction_years
+reconstruction_matrix
+prism_data_for_coordinates
+predictor_matrix
+predlist
+carscores
+max_preds
+linear_models
+
+/* Style for nodes representing parameter channels in workflow */
+node[shape=box style="rounded,filled" fillcolor="#FCFCFC" peripheries=1 fontname=Helvetica]
+
+/* Nodes representing parameter channels in workflow */
+calibration_years
+min_width
+
+/* Edges representing connections between programs and channels */
+verbose -> print_message
+get_predictor_matrix -> predictor_matrix
+get_predictor_matrix -> max_preds
+itrdb -> get_predictor_matrix
+calibration_years -> get_predictor_matrix
+min_width -> get_predictor_matrix
+get_reconstruction_matrix -> reconstruction_matrix
+itrdb -> get_reconstruction_matrix
+prediction_years -> get_reconstruction_matrix
+min_width -> get_reconstruction_matrix
+get_predlist -> predlist
+reconstruction_matrix -> get_predlist
+get_carscores -> carscores
+prism_data_for_coordinates -> get_carscores
+predictor_matrix -> get_carscores
+calculate_Models -> linear_models
+predlist -> calculate_Models
+carscores -> calculate_Models
+max_preds -> calculate_Models
+optimizeModels -> paleocar_models
+linear_models -> optimizeModels
+
+/* End of double cluster for drawing box around nodes in workflow */
+}}
+
+/* Hidden double-cluster for grouping workflow input ports */
+subgraph cluster_input_ports_group_outer { label=""; penwidth=0
+subgraph cluster_input_ports_group_inner { label=""; penwidth=0
+
+/* Style for nodes representing workflow input ports */
+node[shape=circle style="rounded,filled" fillcolor="#FFFFFF" peripheries=1 fontname=Helvetica width=0.2]
+
+/* Nodes representing workflow input ports */
+prediction_years_input_port [label=""]
+prism_data_for_coordinates_input_port [label=""]
+itrdb_input_port [label=""]
+calibration_years_input_port [label=""]
+min_width_input_port [label=""]
+verbose_input_port [label=""]
+
+/* End of double-cluster for grouping workflow input ports */
+}}
+
+/* Hidden double-cluster for grouping workflow output ports */
+subgraph cluster_output_ports_group_outer { label=""; penwidth=0
+subgraph cluster_output_ports_group_inner { label=""; penwidth=0
+
+/* Style for nodes representing workflow output ports */
+node[shape=circle style="rounded,filled" fillcolor="#FFFFFF" peripheries=1 fontname=Helvetica width=0.2]
+
+/* Nodes representing workflow output ports */
+paleocar_models_output_port [label=""]
+
+/* End of double-cluster for grouping workflow output ports */
+}}
+
+/* Edges from input ports to channels */
+prediction_years_input_port -> prediction_years
+prism_data_for_coordinates_input_port -> prism_data_for_coordinates
+itrdb_input_port -> itrdb
+calibration_years_input_port -> calibration_years
+min_width_input_port -> min_width
+verbose_input_port -> verbose
+
+/* Edges from channels to output ports */
+paleocar_models -> paleocar_models_output_port
+
+/* End of top-level graph */
+}
