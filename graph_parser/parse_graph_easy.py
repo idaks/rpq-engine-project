@@ -45,3 +45,4 @@ with open("parleocar.gv",'r') as f:
 
 df = pd.DataFrame(data=np.array(edge), columns = ["startNode", "endNode", "weight"])
 print(df)
+df.to_csv("result.csv")
